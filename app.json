@@ -1,24 +1,26 @@
 {
   "expo": {
-    "name": "kadinlar-sosyal",
-    "slug": "kadinlar-sosyal",
+    "name": "KindRed",
+    "slug": "kindred",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "kindred",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#E74C3C"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.kindred.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#E74C3C"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

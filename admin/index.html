@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kadınlar Sosyal - Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; }
+    h1 { margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f9fafb; font-weight: 600; }
+    button { padding: 8px 16px; border-radius: 8px; cursor: pointer; border: none; font-size: 14px; }
+    .approve { background: #10b981; color: white; margin-right: 8px; }
+    .reject { background: #ef4444; color: white; }
+    .pending { color: #d97706; }
+    .approved { color: #059669; }
+    .rejected { color: #dc2626; }
+    .auth { margin-bottom: 24px; padding: 16px; background: #f3f4f6; border-radius: 8px; }
+    input { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Kadınlar Sosyal - Profil Onay Paneli</h1>
+  <div class="auth" id="authBox">
+    <p>Admin girişi için Supabase Service Role Key kullanın (sadece güvenli ortamda).</p>
+    <p>Alternatif: Supabase Dashboard > Table Editor > profiles üzerinden <code>status</code> alanını <code>approved</code> olarak güncelleyin.</p>
+  </div>
+  <div id="profiles"></div>
+  <script>
+    const SUPABASE_URL = prompt('Supabase URL:') || '';
+    const SUPABASE_KEY = prompt('Supabase anon key (veya service_role key):') || '';
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      document.getElementById('profiles').innerHTML = '<p>URL ve key gerekli.</p>';
+    } else {
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      async function load() {
+        const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+        const statusClass = { pending: 'pending', approved: 'approved', rejected: 'rejected' };
+        const html = data && data.length ? `
+          <table>
+            <tr><th>Ad</th><th>Bio</th><th>Durum</th><th>İşlem</th></tr>
+            ${data.map(p => `
+              <tr>
+                <td>${p.full_name || '-'}</td>
+                <td>${(p.bio || '').slice(0, 50)}...</td>
+                <td class="${statusClass[p.status] || ''}">${p.status}</td>
+                <td>
+                  ${p.status === 'pending' ? `
+                    <button class="approve" onclick="approve('${p.user_id}')">Onayla</button>
+                    <button class="reject" onclick="reject('${p.user_id}')">Reddet</button>
+                  ` : '-'}
+                </td>
+              </tr>
+            `).join('')}
+          </table>
+        ` : '<p>Profıl bulunamadı.</p>';
+        document.getElementById('profiles').innerHTML = html;
+      }
+      window.approve = async (uid) => {
+        await supabase.from('profiles').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('user_id', uid);
+        load();
+      };
+      window.reject = async (uid) => {
+        await supabase.from('profiles').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('user_id', uid);
+        load();
+      };
+      load();
+    }
+  </script>
+</body>
+</html>

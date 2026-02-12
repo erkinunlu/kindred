@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expo Go - Bağlantı</title>
+  <style>
+    body { font-family: system-ui; max-width: 400px; margin: 40px auto; padding: 24px; text-align: center; }
+    h1 { font-size: 20px; margin-bottom: 20px; }
+    img { width: 300px; height: 300px; margin: 20px 0; }
+    a { display: block; margin-top: 20px; color: #E74C3C; word-break: break-all; }
+    p { color: #6b7280; font-size: 14px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Expo Go ile Bağlan</h1>
+  <p>1. Terminalde <code>npx expo start</code> çalışıyor olmalı</p>
+  <p>2. Telefon ve bilgisayar aynı WiFi'de olmalı</p>
+  <p>3. QR kodu Expo Go ile tarayın veya linke tıklayın</p>
+  <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=exp%3A%2F%2F192.168.1.106%3A8081" alt="QR Code">
+  <a href="exp://192.168.1.106:8081">exp://192.168.1.106:8081</a>
+</body>
+</html>
