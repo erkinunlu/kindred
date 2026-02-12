@@ -20,6 +20,7 @@ interface Profile {
   twitter?: string | null;
   facebook?: string | null;
   website?: string | null;
+  profile_visible?: boolean;
 }
 
 interface AuthContextType {

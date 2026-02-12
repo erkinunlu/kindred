@@ -40,4 +40,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# APK output
+*.apk
 supabase/.temp/

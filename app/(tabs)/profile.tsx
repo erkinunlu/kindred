@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,6 +31,7 @@ export default function ProfileScreen() {
   const [website, setWebsite] = useState(profile?.website || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+  const [profileVisible, setProfileVisible] = useState(profile?.profile_visible !== false);
   const [saving, setSaving] = useState(false);
 
   const pickImage = async () => {
@@ -94,6 +96,7 @@ export default function ProfileScreen() {
           facebook: facebook.trim() || null,
           website: website.trim() || null,
           avatar_url: avatarUrl,
+          profile_visible: profileVisible,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', profile.user_id);
@@ -113,6 +116,7 @@ export default function ProfileScreen() {
 
   const startEditing = () => {
     setAvatarBase64(null);
+    setProfileVisible(profile?.profile_visible !== false);
     setFullName(profile?.full_name || '');
     setBio(profile?.bio || '');
     setCity(profile?.city || '');
@@ -203,6 +207,18 @@ export default function ProfileScreen() {
                 autoCapitalize="none"
                 keyboardType="url"
               />
+              <View style={styles.settingRow}>
+                <View style={styles.settingTextWrap}>
+                  <Text style={styles.settingLabel}>Profili herkese açık göster</Text>
+                  <Text style={styles.settingHint}>Kapalıyken sadece arkadaşların görebilir</Text>
+                </View>
+                <Switch
+                  value={profileVisible}
+                  onValueChange={setProfileVisible}
+                  trackColor={{ false: colors.border, true: colors.primary + '80' }}
+                  thumbColor={profileVisible ? colors.primary : '#f4f3f4'}
+                />
+              </View>
               <View style={styles.editButtons}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}>
                   <Text style={styles.cancelBtnText}>İptal</Text>
@@ -323,10 +339,27 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  settingTextWrap: { flex: 1 },
+  settingLabel: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  settingHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   editButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 16,
+    marginTop: 8,
   },
   cancelBtn: {
     flex: 1,

@@ -33,6 +33,7 @@ SQL Editor'de sırayla:
 - `00004_auto_create_profile.sql`
 - `00005_fix_profiles_rls_recursion.sql`
 - `00006_profiles_posts_extended.sql` ← **Gönderi (resim/video) için gerekli**
+- `00007_hashtags_profile_visibility.sql` ← **Profil gizlilik ayarı**
 
 ## 5. Storage (avatars bucket)
 

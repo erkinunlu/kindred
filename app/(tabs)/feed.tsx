@@ -10,10 +10,12 @@ import {
   TextInput,
   Alert,
   Image,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { uriToArrayBuffer, base64ToArrayBufferFromPicker } from '@/lib/uploadUtils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +38,7 @@ interface Post {
 }
 
 export default function FeedScreen() {
+  const router = useRouter();
   const { profile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,9 +137,10 @@ export default function FeedScreen() {
       quality: 0.8,
       base64: type === 'image',
     });
-    if (!result.canceled && result.assets[0]) {
-      setMediaUri(result.assets[0].uri);
-      setMediaBase64(type === 'image' ? (result.assets[0].base64 ?? null) : null);
+    const asset = result.canceled ? null : result.assets?.[0];
+    if (asset?.uri) {
+      setMediaUri(asset.uri);
+      setMediaBase64(type === 'image' && asset.base64 ? asset.base64 : null);
       setPostType(type);
     }
   };
@@ -149,16 +153,22 @@ export default function FeedScreen() {
       if (mediaUri) {
         const ext = postType === 'video' ? 'mp4' : 'jpg';
         const fileName = `${profile.user_id}/post_${Date.now()}.${ext}`;
-        let arrayBuffer: ArrayBuffer;
-        if (postType === 'image' && mediaBase64) {
-          arrayBuffer = base64ToArrayBufferFromPicker(mediaBase64);
-        } else {
-          arrayBuffer = await uriToArrayBuffer(mediaUri);
-        }
         const contentType = postType === 'video' ? 'video/mp4' : 'image/jpeg';
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, arrayBuffer, { upsert: true, contentType });
+        let uploadError: { message: string } | null = null;
+        if (postType === 'video') {
+          const formData = new FormData();
+          formData.append('file', { uri: mediaUri, name: `video.${ext}`, type: contentType } as any);
+          const res = await supabase.storage.from('avatars').upload(fileName, formData, { upsert: true, contentType });
+          uploadError = res.error;
+        } else {
+          const arrayBuffer = mediaBase64
+            ? base64ToArrayBufferFromPicker(mediaBase64)
+            : await uriToArrayBuffer(mediaUri);
+          const res = await supabase.storage
+            .from('avatars')
+            .upload(fileName, arrayBuffer, { upsert: true, contentType: 'image/jpeg' });
+          uploadError = res.error;
+        }
         if (uploadError) {
           console.error('Media upload error:', uploadError);
           Alert.alert('Hata', 'Medya yüklenemedi: ' + (uploadError.message || 'Bilinmeyen hata'));
@@ -285,20 +295,36 @@ export default function FeedScreen() {
 
   const renderPost = ({ item }: { item: Post }) => (
     <View style={styles.postCard}>
-      <View style={styles.postHeader}>
-        <View style={styles.postHeaderLeft}>
-          <Text style={styles.postAuthor}>
-            {item.profiles?.full_name || 'Anonim'}
-          </Text>
-          <Ionicons
-            name={item.post_type === 'video' ? 'videocam' : item.post_type === 'image' ? 'image' : 'document-text'}
-            size={14}
-            color={colors.primary}
-            style={styles.postTypeIcon}
-          />
+      <Pressable
+        style={styles.postContentArea}
+        onPress={() => router.push(`/post/${item.id}`)}
+      >
+        <View style={styles.postHeader}>
+          <TouchableOpacity
+            style={styles.postHeaderLeft}
+            onPress={() => router.push(`/user/${item.user_id}`)}
+          >
+            {item.profiles?.avatar_url ? (
+              <Image source={{ uri: item.profiles.avatar_url }} style={styles.feedAvatar} />
+            ) : (
+              <View style={styles.feedAvatarPlaceholder}>
+                <Text style={styles.feedAvatarText}>{item.profiles?.full_name?.charAt(0) || '?'}</Text>
+              </View>
+            )}
+            <View style={styles.postHeaderText}>
+              <Text style={styles.postAuthor}>{item.profiles?.full_name || 'Anonim'}</Text>
+              <View style={styles.postMetaRow}>
+                <Ionicons
+                  name={item.post_type === 'video' ? 'videocam' : item.post_type === 'image' ? 'image' : 'document-text'}
+                  size={12}
+                  color={colors.primary}
+                  style={styles.postTypeIcon}
+                />
+                <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.postTime}>{formatDate(item.created_at)}</Text>
-      </View>
       {item.media_url && (
         item.post_type === 'video' ? (
           <Video
@@ -318,8 +344,9 @@ export default function FeedScreen() {
         )
       )}
       {item.content ? <Text style={styles.postContent}>{item.content}</Text> : null}
+      </Pressable>
       <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(item.id)}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons
             name={item.is_liked ? 'heart' : 'heart-outline'}
             size={20}
@@ -482,16 +509,44 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  postContentArea: {},
   postHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
   postHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  postHeaderText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  postMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    marginTop: 2,
+  },
+  feedAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  feedAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedAvatarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   postTypeIcon: {
     opacity: 0.8,
