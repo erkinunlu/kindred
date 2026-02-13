@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { uriToArrayBuffer, base64ToArrayBufferFromPicker } from '@/lib/uploadUtils';
 import { colors, fonts } from '@/constants/theme';
+import { formatLocationDisplay } from '@/lib/locationUtils';
 
 const LIGHT_PINK = '#FCE4EC';
 const ICON_BLUE = '#64B5F6';
@@ -121,6 +122,7 @@ export default function ProfileScreen() {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      let district: string | null = null;
       let city: string | null = null;
       let country: string | null = null;
       try {
@@ -128,7 +130,8 @@ export default function ProfileScreen() {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
-        city = addr?.city ?? null;
+        district = addr?.district ?? null;
+        city = addr?.subregion ?? addr?.city ?? null;
         country = addr?.country ?? null;
       } catch {
         // reverse geocode başarısız olursa sadece koordinatları kaydet
@@ -138,6 +141,7 @@ export default function ProfileScreen() {
         .update({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
+          district: district || profile?.district,
           city: city || profile?.city,
           country: country || profile?.country,
           updated_at: new Date().toISOString(),

@@ -16,6 +16,7 @@ interface Profile {
   avatar_url: string | null;
   city?: string | null;
   country?: string | null;
+  district?: string | null;
   instagram?: string | null;
   twitter?: string | null;
   facebook?: string | null;

@@ -15,6 +15,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/theme';
+import { formatLocationDisplay } from '@/lib/locationUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ interface UserProfile {
   avatar_url: string | null;
   city: string | null;
   country: string | null;
+  district?: string | null;
   status: string;
   profile_photos?: string[] | null;
 }
@@ -43,7 +45,7 @@ export default function UserProfileScreen() {
       try {
         const { data: prof, error } = await supabase
           .from('profiles')
-          .select('user_id, full_name, bio, avatar_url, city, country, status, profile_photos')
+          .select('user_id, full_name, bio, avatar_url, city, country, district, status, profile_photos')
           .eq('user_id', id)
           .single();
         if (error || !prof) {
@@ -163,9 +165,9 @@ export default function UserProfileScreen() {
             </View>
           )}
           <Text style={styles.name}>{userProfile.full_name}</Text>
-          {(userProfile.city || userProfile.country) && (
+          {formatLocationDisplay(userProfile) && (
             <Text style={styles.location}>
-              {[userProfile.city, userProfile.country].filter(Boolean).join(', ')}
+              {formatLocationDisplay(userProfile)}
             </Text>
           )}
           {userProfile.bio ? <Text style={styles.bio}>{userProfile.bio}</Text> : null}

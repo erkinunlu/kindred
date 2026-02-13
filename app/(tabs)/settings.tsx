@@ -14,6 +14,7 @@ import * as Location from 'expo-location';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { colors, fonts } from '@/constants/theme';
+import { formatLocationDisplay } from '@/lib/locationUtils';
 import { Text as AppText } from '@/components/Text';
 
 const LIGHT_PINK = '#FCE4EC';
@@ -26,7 +27,7 @@ export default function SettingsScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const email = session?.user?.email || '';
-  const locationText = [profile?.city, profile?.country].filter(Boolean).join(', ') || 'Konum belirlenmedi';
+  const locationText = formatLocationDisplay(profile || {}) || 'Konum belirlenmedi';
 
   const updateLocation = async () => {
     if (!profile?.user_id) return;
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      let district: string | null = null;
       let city: string | null = null;
       let country: string | null = null;
       try {
@@ -50,7 +52,8 @@ export default function SettingsScreen() {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
-        city = addr?.city ?? null;
+        district = addr?.district ?? null;
+        city = addr?.subregion ?? addr?.city ?? null;
         country = addr?.country ?? null;
       } catch {
         // reverse geocode başarısız olursa sadece koordinatları kaydet
@@ -60,6 +63,7 @@ export default function SettingsScreen() {
         .update({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
+          district: district || profile?.district,
           city: city || profile?.city,
           country: country || profile?.country,
           updated_at: new Date().toISOString(),
@@ -130,23 +134,21 @@ export default function SettingsScreen() {
         {/* Konum - sadece göster, Güncelle butonu */}
         <View style={styles.card}>
           <AppText style={styles.cardLabel}>Konum</AppText>
-          <View style={styles.cardRowWithButton}>
-            <View style={styles.cardRow}>
-              <Ionicons name="location-outline" size={22} color={colors.textMuted} />
-              <AppText style={styles.cardValue}>{locationText}</AppText>
-            </View>
-            <TouchableOpacity
-              style={[styles.updateBtn, locationLoading && styles.updateBtnDisabled]}
-              onPress={updateLocation}
-              disabled={locationLoading}
-            >
-              {locationLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <AppText style={styles.updateBtnText}>Güncelle</AppText>
-              )}
-            </TouchableOpacity>
+          <View style={styles.cardRow}>
+            <Ionicons name="location-outline" size={22} color={colors.textMuted} />
+            <AppText style={styles.cardValue}>{locationText}</AppText>
           </View>
+          <TouchableOpacity
+            style={[styles.updateBtn, locationLoading && styles.updateBtnDisabled]}
+            onPress={updateLocation}
+            disabled={locationLoading}
+          >
+            {locationLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <AppText style={styles.updateBtnText}>Konumu Güncelle</AppText>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Dil */}
@@ -253,17 +255,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: colors.text,
   },
-  cardRowWithButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
   updateBtn: {
+    marginTop: 12,
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 12,
+    alignItems: 'center',
   },
   updateBtnDisabled: {
     opacity: 0.6,

@@ -14,6 +14,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/theme';
+import { formatLocationDisplay } from '@/lib/locationUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -23,6 +24,7 @@ interface LikeUser {
   avatar_url: string | null;
   city: string | null;
   country: string | null;
+  district?: string | null;
   birth_date: string | null;
 }
 
@@ -44,7 +46,7 @@ function UserCard({
   onPress: () => void;
 }) {
   const age = getAge(user.birth_date);
-  const location = [user.city, user.country].filter(Boolean).join(', ');
+  const location = formatLocationDisplay(user);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
@@ -86,7 +88,7 @@ export default function LikesScreen() {
     if (friendIds.length === 0) return [];
     const { data } = await supabase
       .from('profiles')
-      .select('user_id, full_name, avatar_url, city, country, birth_date')
+      .select('user_id, full_name, avatar_url, city, country, district, birth_date')
       .in('user_id', friendIds)
       .eq('status', 'approved');
     return data || [];
@@ -117,7 +119,7 @@ export default function LikesScreen() {
     if (notYetMatched.length === 0) return [];
     const { data, error: profError } = await supabase
       .from('profiles')
-      .select('user_id, full_name, avatar_url, city, country, birth_date')
+      .select('user_id, full_name, avatar_url, city, country, district, birth_date')
       .in('user_id', notYetMatched)
       .eq('status', 'approved');
     if (profError) {

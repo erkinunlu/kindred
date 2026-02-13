@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFilter } from '@/contexts/FilterContext';
 import { colors } from '@/constants/theme';
+import { formatLocationDisplay } from '@/lib/locationUtils';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
@@ -31,6 +32,7 @@ interface UserCard {
   avatar_url: string | null;
   city: string | null;
   country: string | null;
+  district?: string | null;
   birth_date: string | null;
   interests: string | null;
   latitude: number | null;
@@ -142,7 +144,7 @@ export default function DiscoverScreen() {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name, bio, avatar_url, city, country, birth_date, interests, latitude, longitude')
+        .select('user_id, full_name, bio, avatar_url, city, country, district, birth_date, interests, latitude, longitude')
         .eq('status', 'approved')
         .neq('user_id', profile.user_id)
         .limit(100);
@@ -335,7 +337,7 @@ export default function DiscoverScreen() {
     if (!currentUser) return null;
 
     const age = getAge(currentUser.birth_date);
-    const location = [currentUser.city, currentUser.country].filter(Boolean).join(', ');
+    const location = formatLocationDisplay(currentUser);
     const interests = currentUser.interests
       ? currentUser.interests.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
