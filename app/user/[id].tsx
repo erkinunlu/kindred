@@ -7,12 +7,16 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/constants/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface UserProfile {
   user_id: string;
@@ -22,6 +26,7 @@ interface UserProfile {
   city: string | null;
   country: string | null;
   status: string;
+  profile_photos?: string[] | null;
 }
 
 export default function UserProfileScreen() {
@@ -38,7 +43,7 @@ export default function UserProfileScreen() {
       try {
         const { data: prof, error } = await supabase
           .from('profiles')
-          .select('user_id, full_name, bio, avatar_url, city, country, status')
+          .select('user_id, full_name, bio, avatar_url, city, country, status, profile_photos')
           .eq('user_id', id)
           .single();
         if (error || !prof) {
@@ -55,6 +60,18 @@ export default function UserProfileScreen() {
             .or(`and(from_user_id.eq.${profile.user_id},to_user_id.eq.${id}),and(from_user_id.eq.${id},to_user_id.eq.${profile.user_id})`)
             .eq('status', 'accepted');
           friend = (fr?.length || 0) > 0;
+          if (!friend) {
+            const { data: fs } = await supabase
+              .from('friendships')
+              .select('user_id, friend_id')
+              .or(`user_id.eq.${profile.user_id},friend_id.eq.${profile.user_id}`);
+            const friendIds = new Set(
+              (fs || []).flatMap((f) =>
+                f.user_id === profile.user_id ? [f.friend_id] : [f.user_id]
+              )
+            );
+            friend = friendIds.has(id);
+          }
         }
         const visible = id === profile.user_id || profileVisible || friend;
         setUserProfile(prof as UserProfile);
@@ -98,6 +115,12 @@ export default function UserProfileScreen() {
   }
 
   const isOwnProfile = id === profile?.user_id;
+  const photos: string[] = [];
+  if (userProfile.profile_photos && Array.isArray(userProfile.profile_photos) && userProfile.profile_photos.length > 0) {
+    photos.push(...userProfile.profile_photos);
+  } else if (userProfile.avatar_url) {
+    photos.push(userProfile.avatar_url);
+  }
 
   return (
     <View style={styles.container}>
@@ -109,8 +132,31 @@ export default function UserProfileScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.profileCard}>
-          {userProfile.avatar_url ? (
-            <Image source={{ uri: userProfile.avatar_url }} style={styles.avatar} />
+          {photos.length > 0 ? (
+            <View style={styles.photosSection}>
+              <FlatList
+                data={photos}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(_, i) => String(i)}
+                getItemLayout={(_, index) => ({
+                  length: SCREEN_WIDTH - 48,
+                  offset: (SCREEN_WIDTH - 48) * index,
+                  index,
+                })}
+                renderItem={({ item }) => (
+                  <Image source={{ uri: item }} style={styles.photoSlide} resizeMode="cover" />
+                )}
+              />
+              {photos.length > 1 && (
+                <View style={styles.photoDots}>
+                  {photos.map((_, i) => (
+                    <View key={i} style={styles.photoDot} />
+                  ))}
+                </View>
+              )}
+            </View>
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>{userProfile.full_name?.charAt(0) || '?'}</Text>
@@ -145,6 +191,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1 },
   scroll: { padding: 24 },
   profileCard: { alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  photosSection: { width: SCREEN_WIDTH - 48, alignSelf: 'center', marginBottom: 16 },
+  photoSlide: { width: SCREEN_WIDTH - 48, height: (SCREEN_WIDTH - 48) * 1.25, borderRadius: 12 },
+  photoDots: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  photoDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, opacity: 0.5 },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   avatarText: { color: '#fff', fontSize: 36, fontWeight: '600' },

@@ -94,10 +94,14 @@ export default function LikesScreen() {
 
   const fetchLikedYou = async () => {
     if (!profile?.user_id) return [];
-    const { data: likes } = await supabase
+    const { data: likes, error: likesError } = await supabase
       .from('user_likes')
       .select('user_id')
       .eq('liked_user_id', profile.user_id);
+    if (likesError) {
+      console.warn('user_likes fetch error:', likesError);
+      return [];
+    }
     const likerIds = (likes || []).map((l) => l.user_id);
     if (likerIds.length === 0) return [];
     const { data: friends } = await supabase
@@ -111,11 +115,15 @@ export default function LikesScreen() {
     );
     const notYetMatched = likerIds.filter((id) => !friendIds.has(id));
     if (notYetMatched.length === 0) return [];
-    const { data } = await supabase
+    const { data, error: profError } = await supabase
       .from('profiles')
       .select('user_id, full_name, avatar_url, city, country, birth_date')
       .in('user_id', notYetMatched)
       .eq('status', 'approved');
+    if (profError) {
+      console.warn('profiles fetch error (liked you):', profError);
+      return [];
+    }
     return data || [];
   };
 
@@ -150,8 +158,6 @@ export default function LikesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Beğeniler</Text>
-
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'matches' && styles.tabActive]}
@@ -227,17 +233,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
   tabs: {
     flexDirection: 'row',
     paddingHorizontal: 20,
+    paddingTop: 16,
     gap: 24,
     marginBottom: 16,
     borderBottomWidth: 1,

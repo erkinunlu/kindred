@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import Slider from '@react-native-community/slider';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,6 +86,7 @@ function haversineKm(
 
 export default function DiscoverScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { profile } = useAuth();
   const { distanceKm, setDistanceKm } = useFilter();
   const [users, setUsers] = useState<UserCard[]>([]);
@@ -173,6 +174,16 @@ export default function DiscoverScreen() {
   useEffect(() => {
     fetchUsers();
   }, [profile?.user_id, distanceKm]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setShowFilter(true)} style={{ padding: 8 }}>
+          <Ionicons name="options-outline" size={24} color={colors.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const checkSwipeLimit = async (): Promise<{ allowed: boolean; resetAt?: Date }> => {
     if (!profile?.user_id) return { allowed: false };
@@ -380,13 +391,6 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Ana Sayfa</Text>
-        <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilter(true)}>
-          <Ionicons name="options-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-
       {loading ? (
         <View style={styles.centered}>
           <Text style={styles.loadingText}>Yükleniyor...</Text>
@@ -411,49 +415,6 @@ export default function DiscoverScreen() {
             </View>
           )}
           {renderCard()}
-        </View>
-      )}
-
-      {currentUser && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.passBtn]}
-            onPress={() => {
-              position.setValue({ x: -SCREEN_WIDTH - 100, y: 0 });
-              Animated.timing(position, {
-                toValue: { x: -SCREEN_WIDTH - 100, y: 0 },
-                duration: 200,
-                useNativeDriver: false,
-              }).start(() => {
-                passUser(currentUser.user_id);
-                position.setValue({ x: 0, y: 0 });
-              });
-            }}
-          >
-            <Ionicons name="close" size={36} color="#ef4444" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.likeBtn]}
-            onPress={async () => {
-              const { allowed, resetAt } = await checkSwipeLimit();
-              if (!allowed && resetAt) {
-                showSwipeLimitAlert(resetAt);
-                return;
-              }
-              const uid = currentUser.user_id;
-              position.setValue({ x: SCREEN_WIDTH + 100, y: 0 });
-              Animated.timing(position, {
-                toValue: { x: SCREEN_WIDTH + 100, y: 0 },
-                duration: 200,
-                useNativeDriver: false,
-              }).start(() => {
-                likeUser(uid);
-                position.setValue({ x: 0, y: 0 });
-              });
-            }}
-          >
-            <Ionicons name="heart" size={36} color="#10b981" />
-          </TouchableOpacity>
         </View>
       )}
 
@@ -522,18 +483,6 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#faf5f5' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
-  filterBtn: { padding: 8 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 16, color: colors.textMuted },
   emptyText: { fontSize: 20, fontWeight: '600', color: colors.text, marginTop: 16 },
@@ -601,21 +550,6 @@ const styles = StyleSheet.create({
   cardLocation: { fontSize: 16, color: '#fff', marginTop: 4, opacity: 0.9 },
   interestsRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
   interestItem: { fontSize: 13, color: '#fff', opacity: 0.9 },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 40,
-    paddingBottom: 40,
-  },
-  actionBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  passBtn: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#ef4444' },
-  likeBtn: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#10b981' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
