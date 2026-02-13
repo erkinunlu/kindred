@@ -9,6 +9,7 @@ import {
   Dimensions,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -29,6 +30,8 @@ interface UserProfile {
   district?: string | null;
   status: string;
   profile_photos?: string[] | null;
+  birth_date?: string | null;
+  interests?: string | null;
 }
 
 export default function UserProfileScreen() {
@@ -45,7 +48,7 @@ export default function UserProfileScreen() {
       try {
         const { data: prof, error } = await supabase
           .from('profiles')
-          .select('user_id, full_name, bio, avatar_url, city, country, district, status, profile_photos')
+          .select('user_id, full_name, bio, avatar_url, city, country, district, status, profile_photos, birth_date, interests')
           .eq('user_id', id)
           .single();
         if (error || !prof) {
@@ -69,7 +72,7 @@ export default function UserProfileScreen() {
               .or(`user_id.eq.${profile.user_id},friend_id.eq.${profile.user_id}`);
             const friendIds = new Set(
               (fs || []).flatMap((f) =>
-                f.user_id === profile.user_id ? [f.friend_id] : [f.user_id]
+                f.user_id === profile.user_id ? f.friend_id : f.user_id
               )
             );
             friend = friendIds.has(id);
@@ -90,29 +93,37 @@ export default function UserProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
+        </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!userProfile || !canView) {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
+        </View>
         <View style={styles.centered}>
-          <Ionicons name="lock-closed" size={48} color={colors.textMuted} />
+          <View style={styles.lockIconWrap}>
+            <Ionicons name="lock-closed" size={48} color={colors.primary} />
+          </View>
           <Text style={styles.hiddenText}>Bu profil gizli</Text>
           <Text style={styles.hiddenSubtext}>Sadece arkadaşları görebilir</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -124,15 +135,33 @@ export default function UserProfileScreen() {
     photos.push(userProfile.avatar_url);
   }
 
+  const getAge = (birthDate: string | null) => {
+    if (!birthDate) return null;
+    const d = new Date(birthDate);
+    if (isNaN(d.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const m = today.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+    return age;
+  };
+
+  const age = getAge(userProfile.birth_date || null);
+  const locationStr = formatLocationDisplay(userProfile);
+  const interests = userProfile.interests
+    ? userProfile.interests.split(',').map((s) => s.trim()).filter(Boolean)
+    : [];
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{userProfile.full_name}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{userProfile.full_name}</Text>
+        <View style={styles.headerSpacer} />
       </View>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard}>
           {photos.length > 0 ? (
             <View style={styles.photosSection}>
@@ -143,8 +172,8 @@ export default function UserProfileScreen() {
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(_, i) => String(i)}
                 getItemLayout={(_, index) => ({
-                  length: SCREEN_WIDTH - 48,
-                  offset: (SCREEN_WIDTH - 48) * index,
+                  length: SCREEN_WIDTH - 32,
+                  offset: (SCREEN_WIDTH - 32) * index,
                   index,
                 })}
                 renderItem={({ item }) => (
@@ -164,13 +193,33 @@ export default function UserProfileScreen() {
               <Text style={styles.avatarText}>{userProfile.full_name?.charAt(0) || '?'}</Text>
             </View>
           )}
-          <Text style={styles.name}>{userProfile.full_name}</Text>
-          {formatLocationDisplay(userProfile) && (
-            <Text style={styles.location}>
-              {formatLocationDisplay(userProfile)}
-            </Text>
+
+          <Text style={styles.name}>
+            {userProfile.full_name}
+            {age != null && `, ${age}`}
+          </Text>
+
+          {locationStr ? (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.location}>{locationStr}</Text>
+            </View>
+          ) : null}
+
+          {interests.length > 0 && (
+            <View style={styles.interestsRow}>
+              {interests.slice(0, 5).map((i, idx) => (
+                <View key={idx} style={styles.interestPill}>
+                  <Text style={styles.interestText}>{i}</Text>
+                </View>
+              ))}
+            </View>
           )}
-          {userProfile.bio ? <Text style={styles.bio}>{userProfile.bio}</Text> : null}
+
+          {userProfile.bio ? (
+            <Text style={styles.bio}>{userProfile.bio}</Text>
+          ) : null}
+
           {!isOwnProfile && (
             <TouchableOpacity
               style={styles.messageBtn}
@@ -182,30 +231,89 @@ export default function UserProfileScreen() {
           )}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: colors.border },
+  container: { flex: 1, backgroundColor: '#fdf2f8' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   backBtn: { padding: 4, marginRight: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1 },
-  scroll: { padding: 24 },
-  profileCard: { alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
-  photosSection: { width: SCREEN_WIDTH - 48, alignSelf: 'center', marginBottom: 16 },
-  photoSlide: { width: SCREEN_WIDTH - 48, height: (SCREEN_WIDTH - 48) * 1.25, borderRadius: 12 },
-  photoDots: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  headerSpacer: { width: 36 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1, textAlign: 'center' },
+  scroll: { padding: 16, paddingBottom: 32 },
+  profileCard: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  photosSection: { width: SCREEN_WIDTH - 32, alignSelf: 'center', marginBottom: 20 },
+  photoSlide: { width: SCREEN_WIDTH - 32, height: (SCREEN_WIDTH - 32) * 1.2, borderRadius: 12 },
+  photoDots: { flexDirection: 'row', gap: 6, marginTop: 12, justifyContent: 'center' },
   photoDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, opacity: 0.5 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
-  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  avatarText: { color: '#fff', fontSize: 36, fontWeight: '600' },
-  name: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  location: { fontSize: 14, color: colors.textMuted, marginBottom: 8 },
-  bio: { fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  messageBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  avatarText: { color: '#fff', fontSize: 48, fontWeight: '600' },
+  name: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8, textAlign: 'center' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 6 },
+  location: { fontSize: 14, color: colors.textMuted },
+  interestsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 16 },
+  interestPill: {
+    backgroundColor: '#fce7f3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fbc2eb',
+  },
+  interestText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
+  bio: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  messageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 16,
+  },
   messageBtnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  hiddenText: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 12 },
-  hiddenSubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
+  lockIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fce7f3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  hiddenText: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 4 },
+  hiddenSubtext: { fontSize: 14, color: colors.textMuted },
 });

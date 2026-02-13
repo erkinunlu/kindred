@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -15,12 +16,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fonts } from '@/constants/theme';
-import { uriToArrayBuffer } from '@/lib/uploadUtils';
+import { uriToArrayBuffer, base64ToArrayBufferFromPicker } from '@/lib/uploadUtils';
 
 export default function CreatePostScreen() {
   const { profile } = useAuth();
   const [content, setContent] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
@@ -36,12 +38,17 @@ export default function CreatePostScreen() {
       quality: 0.8,
       base64: true,
     });
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+    const asset = result.canceled ? null : result.assets?.[0];
+    if (asset) {
+      setImageUri(asset.uri);
+      setImageBase64(asset.base64 ?? null);
     }
   };
 
-  const removeImage = () => setImageUri(null);
+  const removeImage = () => {
+    setImageUri(null);
+    setImageBase64(null);
+  };
 
   const submit = async () => {
     if (!content.trim() && !imageUri) {
@@ -55,7 +62,12 @@ export default function CreatePostScreen() {
       let postType: 'text' | 'image' | 'video' = 'text';
 
       if (imageUri) {
-        const arrayBuffer = await uriToArrayBuffer(imageUri);
+        let arrayBuffer: ArrayBuffer;
+        if (imageBase64) {
+          arrayBuffer = base64ToArrayBufferFromPicker(imageBase64);
+        } else {
+          arrayBuffer = await uriToArrayBuffer(imageUri);
+        }
         const fileName = `${profile.user_id}/${Date.now()}.jpg`;
         const { error } = await supabase.storage
           .from('posts')
@@ -83,7 +95,7 @@ export default function CreatePostScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
           <Ionicons name="close" size={28} color={colors.text} />
@@ -134,7 +146,7 @@ export default function CreatePostScreen() {
           <Text style={styles.addPhotoText}>Fotoğraf ekle</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

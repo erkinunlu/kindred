@@ -19,6 +19,91 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fonts } from '@/constants/theme';
 
+function CommentThread({
+  comment,
+  allComments,
+  onReply,
+  formatDate,
+  styles,
+  depth = 0,
+}: {
+  comment: Comment;
+  allComments: Comment[];
+  onReply: (x: { id: string; author: string }) => void;
+  formatDate: (s: string) => string;
+  styles: Record<string, object>;
+  depth?: number;
+}) {
+  const replies = allComments.filter((r) => r.parent_id === comment.id);
+  const isReply = depth > 0;
+  const content = (
+    <>
+      <Text style={styles.commentAuthor}>
+        {comment.author}
+        {comment.reply_to_author && (
+          <Text style={styles.replyTo}> → {comment.reply_to_author}</Text>
+        )}
+      </Text>
+      <Text style={styles.commentContent}>{comment.content}</Text>
+      <View style={styles.commentMeta}>
+        <Text style={styles.commentTime}>{formatDate(comment.created_at)}</Text>
+        <TouchableOpacity style={styles.replyBtn} onPress={() => onReply({ id: comment.id, author: comment.author })}>
+          <Ionicons name="arrow-undo-outline" size={14} color={colors.primary} />
+          <Text style={styles.replyBtnText}>Yanıtla</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+  const avatarSize = isReply ? 28 : 36;
+  const avatarEl = comment.avatar_url ? (
+    <Image source={{ uri: comment.avatar_url }} style={[styles.commentAvatar, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]} />
+  ) : (
+    <View style={[styles.commentAvatarPlaceholder, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
+      <Text style={[styles.commentAvatarText, { fontSize: avatarSize * 0.45 }]}>{comment.author.charAt(0)}</Text>
+    </View>
+  );
+  const mainContent = (
+    <>
+      <View style={styles.commentWithAvatar}>
+        {avatarEl}
+        <View style={styles.commentRow}>{content}</View>
+      </View>
+      {replies.length > 0 && (
+        <View style={[styles.repliesContainer, !isReply && { marginLeft: avatarSize + 10 }]}>
+          {replies.map((r) => (
+            <CommentThread
+              key={r.id}
+              comment={r}
+              allComments={allComments}
+              onReply={onReply}
+              formatDate={formatDate}
+              styles={styles}
+              depth={depth + 1}
+            />
+          ))}
+        </View>
+      )}
+    </>
+  );
+  return (
+    <View key={comment.id} style={[styles.commentBlock, isReply && styles.replyBlock]}>
+      {isReply && <View style={styles.replyIndicator} />}
+      {isReply ? <View style={styles.replyContent}>{mainContent}</View> : mainContent}
+    </View>
+  );
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  created_at: string;
+  author: string;
+  user_id: string;
+  parent_id: string | null;
+  reply_to_author?: string;
+  avatar_url?: string | null;
+}
+
 interface Post {
   id: string;
   content: string;
@@ -36,8 +121,9 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Array<{ id: string; content: string; created_at: string; author: string }>>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -64,19 +150,28 @@ export default function PostDetailScreen() {
       const { data: likeCount } = await supabase.from('likes').select('post_id').eq('post_id', id);
       const { data: commentData } = await supabase
         .from('comments')
-        .select('id, content, created_at, user_id')
+        .select('id, content, created_at, user_id, parent_id')
         .eq('post_id', id)
         .order('created_at', { ascending: true });
       const userIds = [...new Set((commentData || []).map((c) => c.user_id))];
-      const { data: profs } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
-      const pmap = new Map((profs || []).map((p) => [p.user_id, p.full_name]));
+      const { data: profs } = await supabase.from('profiles').select('user_id, full_name, avatar_url').in('user_id', userIds);
+      const pmap = new Map((profs || []).map((p) => [p.user_id, p]));
+      const cmap = new Map((commentData || []).map((c) => [c.id, c]));
       setComments(
-        (commentData || []).map((c) => ({
-          id: c.id,
-          content: c.content,
-          created_at: c.created_at,
-          author: pmap.get(c.user_id) || 'Anonim',
-        }))
+        (commentData || []).map((c) => {
+          const parent = c.parent_id ? cmap.get(c.parent_id) : null;
+          const prof = pmap.get(c.user_id);
+          return {
+            id: c.id,
+            content: c.content,
+            created_at: c.created_at,
+            author: prof?.full_name || 'Anonim',
+            user_id: c.user_id,
+            parent_id: c.parent_id || null,
+            reply_to_author: parent ? pmap.get(parent.user_id)?.full_name : undefined,
+            avatar_url: prof?.avatar_url ?? null,
+          };
+        })
       );
       setPost({
         ...postData,
@@ -120,17 +215,33 @@ export default function PostDetailScreen() {
   const addComment = async () => {
     if (!commentInput.trim() || !profile?.user_id || !id) return;
     try {
+      const payload: { post_id: string; user_id: string; content: string; parent_id?: string } = {
+        post_id: id,
+        user_id: profile.user_id,
+        content: commentInput.trim(),
+      };
+      if (replyTo) {
+        payload.parent_id = replyTo.id;
+      }
       const { data, error } = await supabase
         .from('comments')
-        .insert({ post_id: id, user_id: profile.user_id, content: commentInput.trim() })
+        .insert(payload)
         .select()
         .single();
       if (error) throw error;
       setCommentInput('');
-      setComments((prev) => [
-        ...prev,
-        { id: data.id, content: data.content, created_at: data.created_at, author: profile?.full_name || 'Ben' },
-      ]);
+      setReplyTo(null);
+      const newComment: Comment = {
+        id: data.id,
+        content: data.content,
+        created_at: data.created_at,
+        author: profile?.full_name || 'Ben',
+        user_id: profile.user_id,
+        parent_id: data.parent_id || null,
+        reply_to_author: replyTo ? replyTo.author : undefined,
+        avatar_url: profile?.avatar_url ?? null,
+      };
+      setComments((prev) => [...prev, newComment]);
       setPost((p) => (p ? { ...p, comment_count: (p.comment_count || 0) + 1 } : null));
     } catch (err) {
       console.error(err);
@@ -206,17 +317,30 @@ export default function PostDetailScreen() {
 
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>Yorumlar</Text>
-          {comments.map((c) => (
-            <View key={c.id} style={styles.commentRow}>
-              <Text style={styles.commentAuthor}>{c.author}</Text>
-              <Text style={styles.commentContent}>{c.content}</Text>
-              <Text style={styles.commentTime}>{formatDate(c.created_at)}</Text>
+          {comments
+            .filter((c) => !c.parent_id)
+            .map((parent) => (
+              <CommentThread
+                key={parent.id}
+                comment={parent}
+                allComments={comments}
+                onReply={setReplyTo}
+                formatDate={formatDate}
+                styles={styles}
+              />
+            ))}
+          {replyTo && (
+            <View style={styles.replyBar}>
+              <Text style={styles.replyBarText}>Yanıtla: @{replyTo.author}</Text>
+              <TouchableOpacity onPress={() => setReplyTo(null)}>
+                <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
             </View>
-          ))}
+          )}
           <View style={styles.commentInputRow}>
             <TextInput
               style={styles.commentInput}
-              placeholder="Yorum yaz..."
+              placeholder={replyTo ? `@${replyTo.author} yanıtla...` : 'Yorum yaz...'}
               placeholderTextColor={colors.textMuted}
               value={commentInput}
               onChangeText={setCommentInput}
@@ -254,10 +378,34 @@ const styles = StyleSheet.create({
   actionCount: { fontSize: 14, color: colors.textMuted },
   commentsSection: { backgroundColor: '#fff', borderRadius: 12, padding: 16 },
   commentsTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  commentRow: { marginBottom: 12 },
+  commentBlock: { marginBottom: 12 },
+  replyBlock: { flexDirection: 'row', marginLeft: 12, marginBottom: 8 },
+  commentWithAvatar: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  commentAvatar: {},
+  commentAvatarPlaceholder: { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  commentAvatarText: { color: '#fff', fontWeight: '600' },
+  repliesContainer: { marginTop: 4 },
+  commentRow: { flex: 1, marginBottom: 0 },
   commentAuthor: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   commentContent: { fontSize: 14, color: colors.text },
-  commentTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
+  commentTime: { fontSize: 11, color: colors.textMuted },
+  replyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  replyBtnText: { fontSize: 12, color: colors.primary, fontWeight: '500' },
+  replyIndicator: { width: 2, backgroundColor: colors.border, marginRight: 10, borderRadius: 1 },
+  replyContent: { flex: 1 },
+  replyTo: { fontWeight: '400', color: colors.textMuted },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fce7f3',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  replyBarText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
   commentInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   commentInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 14, fontFamily: fonts.regular },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },

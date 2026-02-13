@@ -424,10 +424,11 @@ export default function ProfileScreen() {
                           quality: 0.8,
                           base64: true,
                         });
-                        if (!r.canceled && r.assets[0]) {
+                        const asset = r.canceled ? null : r.assets?.[0];
+                        if (asset) {
                           setProfilePhotosLocal((prev) => {
                             const n = [...prev];
-                            n[i] = { uri: r.assets[0].uri, base64: r.assets[0].base64 ?? undefined };
+                            n[i] = { uri: asset.uri, base64: asset.base64 ?? undefined };
                             return n;
                           });
                         }

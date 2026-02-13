@@ -8,12 +8,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text } from '@/components/Text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '@/constants/theme';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+
+const LAST_READ_KEY = 'dm_last_read';
 
 interface Message {
   id: string;
@@ -53,7 +56,17 @@ export default function ChatScreen() {
           `and(sender_id.eq.${profile.user_id},receiver_id.eq.${id}),and(sender_id.eq.${id},receiver_id.eq.${profile.user_id})`
         )
         .order('created_at', { ascending: true });
-      setMessages(data || []);
+      const msgs = data || [];
+      setMessages(msgs);
+      const latest = msgs[msgs.length - 1];
+      if (latest && profile.user_id) {
+        try {
+          const stored = await AsyncStorage.getItem(LAST_READ_KEY);
+          const map: Record<string, string> = stored ? JSON.parse(stored) : {};
+          map[`${profile.user_id}_${id}`] = latest.created_at;
+          await AsyncStorage.setItem(LAST_READ_KEY, JSON.stringify(map));
+        } catch (_) {}
+      }
     };
     loadMessages();
   }, [id, profile?.user_id]);

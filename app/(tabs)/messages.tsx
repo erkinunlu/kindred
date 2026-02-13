@@ -6,12 +6,15 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fonts } from '@/constants/theme';
+
+const LAST_READ_KEY = 'dm_last_read';
 
 interface MatchUser {
   user_id: string;
@@ -159,13 +162,20 @@ export default function MessagesScreen() {
 
       const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
 
+      let lastReadMap: Record<string, string> = {};
+      try {
+        const stored = await AsyncStorage.getItem(LAST_READ_KEY);
+        if (stored) lastReadMap = JSON.parse(stored);
+      } catch (_) {}
+
       const convos: Conversation[] = Array.from(otherUserIds)
         .filter((uid) => !blockedSet.has(uid))
         .map((uid) => {
           const p = profileMap.get(uid);
           const last = lastByUser[uid];
           const isDeleted = !p || p.status !== 'approved';
-          const unread = last?.sender_id === uid ? 1 : 0;
+          const lastRead = lastReadMap[`${profile.user_id}_${uid}`] || '';
+          const unread = last?.sender_id === uid && last.created_at > lastRead ? 1 : 0;
           return {
             id: uid,
             participant: {

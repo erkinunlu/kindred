@@ -22,12 +22,12 @@ import { VideoPlayer } from '@/components/VideoPlayer';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const REACTIONS = [
-  { type: 'like', emoji: '❤️', label: 'Beğen' },
-  { type: 'love', emoji: '😍', label: 'Sevdim' },
-  { type: 'haha', emoji: '😂', label: 'Güldüm' },
-  { type: 'wow', emoji: '😮', label: 'Vay' },
-  { type: 'sad', emoji: '😢', label: 'Üzücü' },
-  { type: 'angry', emoji: '😠', label: 'Kızdım' },
+  { type: 'like', icon: 'heart' as const, iconOutline: 'heart-outline' as const, label: 'Beğen' },
+  { type: 'love', icon: 'heart-circle' as const, iconOutline: 'heart-circle-outline' as const, label: 'Sevdim' },
+  { type: 'haha', icon: 'happy' as const, iconOutline: 'happy-outline' as const, label: 'Güldüm' },
+  { type: 'wow', icon: 'star' as const, iconOutline: 'star-outline' as const, label: 'Vay' },
+  { type: 'sad', icon: 'sad' as const, iconOutline: 'sad-outline' as const, label: 'Üzücü' },
+  { type: 'angry', icon: 'flame' as const, iconOutline: 'flame-outline' as const, label: 'Kızdım' },
 ] as const;
 
 type ReactionType = (typeof REACTIONS)[number]['type'];
@@ -145,7 +145,11 @@ function PostCard({
             style={styles.reactionBtn}
             onPress={() => setShowReactions((v) => !v)}
           >
-            <AppText style={styles.reactionEmoji}>{post.my_reaction ? REACTIONS.find((r) => r.type === post.my_reaction)?.emoji || '❤️' : '❤️'}</AppText>
+            <Ionicons
+              name={post.my_reaction ? REACTIONS.find((r) => r.type === post.my_reaction)?.icon || 'heart-outline' : 'heart-outline'}
+              size={22}
+              color={post.my_reaction ? colors.primary : colors.textMuted}
+            />
             {(totalReactions > 0 || post.my_reaction) && (
               <AppText style={styles.actionCount}>{totalReactions}</AppText>
             )}
@@ -162,7 +166,9 @@ function PostCard({
                     setShowReactions(false);
                   }}
                 >
-                  <AppText style={styles.reactionOptionEmoji}>{r.emoji}</AppText>
+                  <View style={styles.reactionIconWrap}>
+                    <Ionicons name={r.iconOutline} size={26} color={colors.primary} />
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -400,25 +406,33 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingHorizontal: 16, paddingBottom: 16 },
   reactionArea: { position: 'relative' },
   reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  reactionEmoji: { fontSize: 22 },
   reactionPicker: {
     position: 'absolute',
     bottom: 36,
     left: 0,
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 24,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    borderRadius: 28,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 6,
     gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  reactionOption: { padding: 4 },
-  reactionOptionEmoji: { fontSize: 28 },
+  reactionOption: { padding: 6 },
+  reactionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fce7f3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionCount: { fontSize: 14, color: colors.textMuted },
   fab: {
