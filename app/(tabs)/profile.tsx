@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
   StyleSheet,
@@ -68,6 +69,7 @@ function MenuItem({
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { profile, session, signOut, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -339,7 +341,7 @@ export default function ProfileScreen() {
             icon="settings-outline"
             iconColor={ICON_BLUE}
             label="Ayarlar"
-            onPress={() => router.push('/settings')}
+            onPress={() => router.push('/(tabs)/settings')}
           />
           <MenuItem
             icon="help-circle-outline"
@@ -370,8 +372,8 @@ export default function ProfileScreen() {
 
       {/* Edit Modal */}
       <Modal visible={editing} animationType="slide" presentationStyle="pageSheet">
-        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalHeader}>
+        <KeyboardAvoidingView style={styles.modalContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 12) }]}>
             <TouchableOpacity onPress={() => setEditing(false)} style={styles.modalBackBtn}>
               <Ionicons name="chevron-back" size={28} color={colors.text} />
             </TouchableOpacity>

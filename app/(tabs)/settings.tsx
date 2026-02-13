@@ -7,7 +7,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useSafeAreaInsets } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useAuth } from '@/contexts/AuthContext';

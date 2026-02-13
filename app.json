@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Yakındaki kullanıcıları göstermek için konumunuza ihtiyacımız var."
+        "NSLocationWhenInUseUsageDescription": "Yak\u0131ndaki kullan\u0131c\u0131lar\u0131 g\u00f6stermek i\u00e7in konumunuza ihtiyac\u0131m\u0131z var."
       }
     },
     "android": {
@@ -26,7 +26,8 @@
         "backgroundColor": "#E74C3C"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"

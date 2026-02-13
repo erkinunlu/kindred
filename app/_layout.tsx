@@ -55,7 +55,6 @@ export default function RootLayout() {
           <Stack.Screen name="chat/[id]" />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="user/[id]" />
-          <Stack.Screen name="settings" />
         </Stack>
           </NotificationsProvider>
           </FilterProvider>
