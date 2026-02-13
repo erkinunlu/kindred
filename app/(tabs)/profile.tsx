@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { Text } from '@/components/Text';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -21,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { uriToArrayBuffer, base64ToArrayBufferFromPicker } from '@/lib/uploadUtils';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 
 const LIGHT_PINK = '#FCE4EC';
 const ICON_BLUE = '#64B5F6';
@@ -66,6 +67,7 @@ function MenuItem({
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { profile, session, signOut, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -117,11 +119,25 @@ export default function ProfileScreen() {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      let city: string | null = null;
+      let country: string | null = null;
+      try {
+        const [addr] = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        city = addr?.city ?? null;
+        country = addr?.country ?? null;
+      } catch {
+        // reverse geocode başarısız olursa sadece koordinatları kaydet
+      }
       const { error } = await supabase
         .from('profiles')
         .update({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
+          city: city || profile?.city,
+          country: country || profile?.country,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', profile.user_id);
@@ -279,12 +295,8 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header: Avatar + Buttons */}
+        {/* Header: Avatar */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Ayarlar', 'Yakında burada ayarlar olacak.')}>
-            <Ionicons name="settings-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
-
           <View style={styles.avatarWrap}>
             <TouchableOpacity style={styles.avatarButton} onPress={editing ? pickImage : undefined}>
               {(avatarUri || profile?.avatar_url) ? (
@@ -302,10 +314,6 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.iconBtn} onPress={startEditing}>
-            <Ionicons name="pencil-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
         </View>
 
         {/* Completion badge */}
@@ -331,7 +339,7 @@ export default function ProfileScreen() {
             icon="settings-outline"
             iconColor={ICON_BLUE}
             label="Ayarlar"
-            onPress={() => Alert.alert('Ayarlar', 'Yakında burada ayarlar olacak.')}
+            onPress={() => router.push('/settings')}
           />
           <MenuItem
             icon="help-circle-outline"
@@ -611,14 +619,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: LIGHT_PINK,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   avatarWrap: {
     flex: 1,
     alignItems: 'center',
@@ -831,6 +831,7 @@ const styles = StyleSheet.create({
     padding: 0,
     minHeight: 24,
     textAlignVertical: 'top',
+    fontFamily: fonts.regular,
   },
   cardRow: {
     flexDirection: 'row',
@@ -854,6 +855,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
     color: colors.text,
+    fontFamily: fonts.regular,
   },
   bioInput: {
     minHeight: 80,

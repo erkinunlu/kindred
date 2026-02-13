@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { fonts } from '@/constants/theme';
 
 export default function TabsLayout() {
   return (
@@ -12,7 +13,7 @@ export default function TabsLayout() {
           borderBottomColor: '#e5e7eb',
         },
         headerTitleStyle: {
-          fontWeight: '600',
+          fontFamily: fonts.semiBold,
           fontSize: 18,
         },
       }}

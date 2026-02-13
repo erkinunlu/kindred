@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -10,7 +9,8 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { colors } from '@/constants/theme';
+import { Text } from '@/components/Text';
+import { colors, fonts } from '@/constants/theme';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: fonts.regular,
     marginBottom: 16,
     color: '#1f2937',
   },

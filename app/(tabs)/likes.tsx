@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Image,
@@ -9,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
+import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';

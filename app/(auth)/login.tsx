@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -9,7 +8,8 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { colors } from '@/constants/theme';
+import { Text } from '@/components/Text';
+import { colors, fonts } from '@/constants/theme';
 import { Link, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     color: '#1f2937',
+    fontFamily: fonts.regular,
   },
   button: {
     backgroundColor: colors.primary,

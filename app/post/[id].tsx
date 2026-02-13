@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   Image,
@@ -9,12 +8,13 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 
 interface Post {
   id: string;
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   commentContent: { fontSize: 14, color: colors.text },
   commentTime: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   commentInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  commentInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 14 },
+  commentInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 14, fontFamily: fonts.regular },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { color: colors.textMuted },
 });

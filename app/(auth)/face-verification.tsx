@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
   Platform,
   Linking,
 } from 'react-native';
+import { Text } from '@/components/Text';
 import { colors } from '@/constants/theme';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';

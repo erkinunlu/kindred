@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TextInput,
   TouchableOpacity,
@@ -9,7 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { colors } from '@/constants/theme';
+import { Text } from '@/components/Text';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, fonts } from '@/constants/theme';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +26,7 @@ interface Message {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ full_name: string } | null>(null);
@@ -116,7 +118,7 @@ export default function ChatScreen() {
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messagesList}
+        contentContainerStyle={[styles.messagesList, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>Henüz mesaj yok</Text>
@@ -124,7 +126,7 @@ export default function ChatScreen() {
           </View>
         }
       />
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TextInput
           style={styles.input}
           placeholder="Mesaj yaz..."
@@ -237,6 +239,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     maxHeight: 100,
     marginRight: 8,
+    fontFamily: fonts.regular,
+    fontSize: 16,
   },
   sendBtn: {
     backgroundColor: colors.primary,

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   Image,
@@ -11,6 +10,7 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useNavigation } from 'expo-router';
 import Slider from '@react-native-community/slider';
@@ -239,7 +239,7 @@ export default function DiscoverScreen() {
       }
 
       setUsers((prev) => prev.filter((u) => u.user_id !== userId));
-      setCurrentIndex((i) => Math.min(i, users.length - 2));
+      setCurrentIndex(0);
     } catch (err) {
       console.error(err);
     }
@@ -250,7 +250,7 @@ export default function DiscoverScreen() {
     try {
       await supabase.from('user_passes').insert({ user_id: profile.user_id, passed_user_id: userId });
       setUsers((prev) => prev.filter((u) => u.user_id !== userId));
-      setCurrentIndex((i) => Math.min(i, users.length - 2));
+      setCurrentIndex(0);
     } catch (err) {
       console.error(err);
     }
@@ -285,8 +285,8 @@ export default function DiscoverScreen() {
               tension: 50,
               friction: 8,
             }).start(() => {
-              likeUser(uid);
               position.setValue({ x: 0, y: 0 });
+              likeUser(uid);
             });
           });
         } else if (gesture.dx < -SWIPE_THRESHOLD && current) {
@@ -296,8 +296,8 @@ export default function DiscoverScreen() {
             tension: 50,
             friction: 8,
           }).start(() => {
-            passUser(current.user_id);
             position.setValue({ x: 0, y: 0 });
+            passUser(current.user_id);
           });
         } else {
           Animated.spring(position, {
@@ -342,6 +342,7 @@ export default function DiscoverScreen() {
 
     return (
       <Animated.View
+        key={currentUser.user_id}
         {...panResponder.panHandlers}
         style={[
           styles.card,

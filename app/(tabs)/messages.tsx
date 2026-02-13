@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Text } from '@/components/Text';
 import { colors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -105,11 +106,18 @@ export default function MessagesScreen() {
             style={styles.conversationCard}
             onPress={() => router.push(`/chat/${item.id}`)}
           >
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.participant.full_name?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
-            </View>
+            {item.participant.avatar_url ? (
+              <Image
+                source={{ uri: item.participant.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {item.participant.full_name?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
+              </View>
+            )}
             <View style={styles.conversationInfo}>
               <Text style={styles.conversationName}>
                 {item.participant.full_name}
@@ -160,6 +168,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
   },
   avatarPlaceholder: {
     width: 48,

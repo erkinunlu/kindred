@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -11,7 +10,8 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { colors } from '@/constants/theme';
+import { Text } from '@/components/Text';
+import { colors, fonts } from '@/constants/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -208,6 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     color: '#1f2937',
+    fontFamily: fonts.regular,
   },
   textArea: {
     minHeight: 100,
