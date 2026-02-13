@@ -11,8 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { uriToArrayBuffer, base64ToArrayBufferFromPicker } from '@/lib/uploadUtils';
@@ -29,10 +32,46 @@ export default function ProfileScreen() {
   const [twitter, setTwitter] = useState(profile?.twitter || '');
   const [facebook, setFacebook] = useState(profile?.facebook || '');
   const [website, setWebsite] = useState(profile?.website || '');
+  const [interests, setInterests] = useState(profile?.interests || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [profileVisible, setProfileVisible] = useState(profile?.profile_visible !== false);
   const [saving, setSaving] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const getDeviceLocation = async () => {
+    if (!profile?.user_id) return;
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Konum izni gerekli',
+          'Yakındaki kullanıcıları gösterebilmek için konum erişimine izin vermeniz gerekiyor. Lütfen ayarlardan izin verin.'
+        );
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', profile.user_id);
+      if (error) throw error;
+      await refreshProfile();
+      Alert.alert('Başarılı', 'Konumunuz kaydedildi.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Konum alınamadı.';
+      Alert.alert('Hata', String(msg));
+    } finally {
+      setLocationLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -97,6 +136,7 @@ export default function ProfileScreen() {
           website: website.trim() || null,
           avatar_url: avatarUrl,
           profile_visible: profileVisible,
+          interests: interests.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', profile.user_id);
@@ -125,6 +165,7 @@ export default function ProfileScreen() {
     setTwitter(profile?.twitter || '');
     setFacebook(profile?.facebook || '');
     setWebsite(profile?.website || '');
+    setInterests(profile?.interests || '');
     setEditing(true);
   };
 
@@ -207,6 +248,39 @@ export default function ProfileScreen() {
                 autoCapitalize="none"
                 keyboardType="url"
               />
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                placeholder="İlgi alanları (virgülle ayır: Kahve, Spor, Yemek)"
+                value={interests}
+                onChangeText={setInterests}
+              />
+              <View style={styles.locationSection}>
+                <Text style={styles.locationLabel}>Konum</Text>
+                <Text style={styles.locationHint}>
+                  Yakındaki kullanıcıları göstermek için cihazınızın konumunu kullanırız. Manuel giriş yapılamaz.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.locationButton, locationLoading && styles.disabled]}
+                  onPress={getDeviceLocation}
+                  disabled={locationLoading}
+                >
+                  {locationLoading ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="location" size={20} color={colors.white} style={{ marginRight: 8 }} />
+                      <Text style={styles.locationButtonText}>
+                        {profile?.latitude != null && profile?.longitude != null
+                          ? 'Konumumu Güncelle'
+                          : 'Konumumu Seç'}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                {(profile?.latitude != null && profile?.longitude != null) && (
+                  <Text style={styles.locationStatus}>Konum ayarlandı</Text>
+                )}
+              </View>
               <View style={styles.settingRow}>
                 <View style={styles.settingTextWrap}>
                   <Text style={styles.settingLabel}>Profili herkese açık göster</Text>
@@ -240,6 +314,9 @@ export default function ProfileScreen() {
                 <Text style={styles.location}>
                   {[profile?.city, profile?.country].filter(Boolean).join(', ')}
                 </Text>
+              )}
+              {profile?.latitude != null && profile?.longitude != null && (
+                <Text style={styles.locationSet}>Konum ayarlandı</Text>
               )}
               {(profile?.instagram || profile?.twitter || profile?.facebook) && (
                 <View style={styles.socialRow}>
@@ -386,6 +463,44 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.7,
+  },
+  locationSection: {
+    marginBottom: 20,
+  },
+  locationLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  locationHint: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  locationButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  locationStatus: {
+    fontSize: 13,
+    color: colors.primary,
+    marginTop: 8,
+  },
+  locationSet: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 4,
   },
   editButton: {
     marginTop: 16,

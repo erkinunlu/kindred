@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { FilterProvider } from '@/contexts/FilterContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -17,6 +18,7 @@ export default function RootLayout() {
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthProvider>
+          <FilterProvider>
           <NotificationsProvider>
         <StatusBar style="auto" />
         <Stack screenOptions={{ headerShown: false }}>
@@ -30,6 +32,7 @@ export default function RootLayout() {
           <Stack.Screen name="user/[id]" />
         </Stack>
           </NotificationsProvider>
+          </FilterProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

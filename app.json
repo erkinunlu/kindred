@@ -14,7 +14,10 @@
       "backgroundColor": "#E74C3C"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Yakındaki kullanıcıları göstermek için konumunuza ihtiyacımız var."
+      }
     },
     "android": {
       "package": "com.kindred.app",

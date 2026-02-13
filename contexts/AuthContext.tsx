@@ -21,6 +21,9 @@ interface Profile {
   facebook?: string | null;
   website?: string | null;
   profile_visible?: boolean;
+  interests?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface AuthContextType {
