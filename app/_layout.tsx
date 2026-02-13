@@ -53,7 +53,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="pending-approval" />
           <Stack.Screen name="chat/[id]" />
-          <Stack.Screen name="post/[id]" />
+          <Stack.Screen name="post" />
           <Stack.Screen name="user/[id]" />
         </Stack>
           </NotificationsProvider>

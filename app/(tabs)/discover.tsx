@@ -66,6 +66,24 @@ function formatResetTime(date: Date): string {
   });
 }
 
+const INTEREST_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  müzik: 'musical-notes',
+  music: 'musical-notes',
+  pizza: 'pizza',
+  seyahat: 'airplane',
+  travel: 'airplane',
+  kitap: 'book',
+  book: 'book',
+  spor: 'bicycle',
+  sport: 'bicycle',
+  kahve: 'cafe',
+  coffee: 'cafe',
+  yemek: 'restaurant',
+  food: 'restaurant',
+  sinema: 'film',
+  film: 'film',
+};
+
 /** Haversine formülü - km cinsinden mesafe */
 function haversineKm(
   lat1: number,
@@ -101,6 +119,7 @@ export default function DiscoverScreen() {
     if (showFilter) setFilterDistance(distanceKm);
   }, [showFilter, distanceKm]);
   const [matchModal, setMatchModal] = useState<{ name: string; userId: string } | null>(null);
+  const [myCoords, setMyCoords] = useState<{ lat: number; lon: number }>({ lat: 41.0082, lon: 28.9784 });
   const position = useRef(new Animated.ValueXY()).current;
   const usersRef = useRef(users);
   const currentIndexRef = useRef(currentIndex);
@@ -119,6 +138,7 @@ export default function DiscoverScreen() {
 
       const myLat = myProfile?.latitude ?? 41.0082;
       const myLon = myProfile?.longitude ?? 28.9784;
+      setMyCoords({ lat: myLat, lon: myLon });
 
       const { data: liked } = await supabase
         .from('user_likes')
@@ -181,7 +201,7 @@ export default function DiscoverScreen() {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity onPress={() => setShowFilter(true)} style={{ padding: 8 }}>
-          <Ionicons name="options-outline" size={24} color={colors.text} />
+          <Ionicons name="filter" size={24} color={colors.text} />
         </TouchableOpacity>
       ),
     });
@@ -321,23 +341,20 @@ export default function DiscoverScreen() {
     extrapolate: 'clamp',
   });
 
-  const likeOpacity = position.x.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const passOpacity = position.x.interpolate({
-    inputRange: [-SWIPE_THRESHOLD, 0],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
   const renderCard = () => {
     if (!currentUser) return null;
 
     const age = getAge(currentUser.birth_date);
-    const location = formatLocationDisplay(currentUser);
+    const locationStr = formatLocationDisplay(currentUser);
+    const distKm = haversineKm(
+      myCoords.lat,
+      myCoords.lon,
+      currentUser.latitude ?? 41.0082,
+      currentUser.longitude ?? 28.9784
+    );
+    const locationDisplay = locationStr
+      ? `${locationStr}, ${Math.round(distKm)}km uzaklıkta`
+      : `${Math.round(distKm)}km uzaklıkta`;
     const interests = currentUser.interests
       ? currentUser.interests.split(',').map((s) => s.trim()).filter(Boolean)
       : [];
@@ -357,13 +374,6 @@ export default function DiscoverScreen() {
           },
         ]}
       >
-        <Animated.View style={[styles.likeBadge, { opacity: likeOpacity }]}>
-          <Text style={styles.likeBadgeText}>BEĞENDİM</Text>
-        </Animated.View>
-        <Animated.View style={[styles.passBadge, { opacity: passOpacity }]}>
-          <Text style={styles.passBadgeText}>GEÇ</Text>
-        </Animated.View>
-
         {currentUser.avatar_url ? (
           <Image source={{ uri: currentUser.avatar_url }} style={styles.cardImage} resizeMode="cover" />
         ) : (
@@ -373,18 +383,30 @@ export default function DiscoverScreen() {
         )}
 
         <View style={styles.cardOverlay}>
-          <Text style={styles.cardName}>
-            {currentUser.full_name}
-            {age != null ? `, ${age}` : ''}
-          </Text>
-          {location ? <Text style={styles.cardLocation}>{location}</Text> : null}
+          <View style={styles.cardNameRow}>
+            <Text style={styles.cardName}>
+              {currentUser.full_name}
+              {age != null ? `, ${age}` : ''}
+            </Text>
+            <View style={styles.onlineDot} />
+          </View>
+          {locationDisplay ? (
+            <View style={styles.locationRow}>
+              <Ionicons name="location" size={16} color="#fff" style={{ marginRight: 4 }} />
+              <Text style={styles.cardLocation}>{locationDisplay}</Text>
+            </View>
+          ) : null}
           {interests.length > 0 && (
             <View style={styles.interestsRow}>
-              {interests.slice(0, 5).map((i, idx) => (
-                <Text key={idx} style={styles.interestItem}>
-                  • {i}
-                </Text>
-              ))}
+              {interests.slice(0, 5).map((i, idx) => {
+                const icon = INTEREST_ICONS[i.toLowerCase()] || 'heart';
+                return (
+                  <View key={idx} style={styles.interestPill}>
+                    <Ionicons name={icon} size={14} color="#fff" style={{ marginRight: 4 }} />
+                    <Text style={styles.interestItem}>{i}</Text>
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -405,19 +427,52 @@ export default function DiscoverScreen() {
           <Text style={styles.emptySubtext}>Filtreleri gevşet veya daha sonra tekrar bak</Text>
         </View>
       ) : (
-        <View style={styles.cardContainer}>
-          {users[currentIndex + 1] && (
-            <View style={[styles.card, styles.cardBehind]}>
-              {users[currentIndex + 1].avatar_url ? (
-                <Image source={{ uri: users[currentIndex + 1].avatar_url }} style={styles.cardImage} resizeMode="cover" />
-              ) : (
-                <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-                  <Text style={styles.placeholderText}>{users[currentIndex + 1].full_name?.charAt(0) || '?'}</Text>
-                </View>
-              )}
-            </View>
-          )}
-          {renderCard()}
+        <View style={styles.mainContent}>
+          <View style={styles.cardContainer}>
+            {users[currentIndex + 1] && (
+              <View style={[styles.card, styles.cardBehind]}>
+                {users[currentIndex + 1].avatar_url ? (
+                  <Image source={{ uri: users[currentIndex + 1].avatar_url }} style={styles.cardImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                    <Text style={styles.placeholderText}>{users[currentIndex + 1].full_name?.charAt(0) || '?'}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {renderCard()}
+          </View>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.actionBtnPass} onPress={() => currentUser && passUser(currentUser.user_id)}>
+              <Ionicons name="close" size={32} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtnSuperLike}
+              onPress={() => {
+                if (currentUser) {
+                  checkSwipeLimit().then(({ allowed, resetAt }) => {
+                    if (!allowed && resetAt) showSwipeLimitAlert(resetAt);
+                    else likeUser(currentUser.user_id);
+                  });
+                }
+              }}
+            >
+              <Ionicons name="star" size={28} color="#3B82F6" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtnLike}
+              onPress={() => {
+                if (currentUser) {
+                  checkSwipeLimit().then(({ allowed, resetAt }) => {
+                    if (!allowed && resetAt) showSwipeLimitAlert(resetAt);
+                    else likeUser(currentUser.user_id);
+                  });
+                }
+              }}
+            >
+              <Ionicons name="heart" size={32} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -490,11 +545,14 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 16, color: colors.textMuted },
   emptyText: { fontSize: 20, fontWeight: '600', color: colors.text, marginTop: 16 },
   emptySubtext: { fontSize: 14, color: colors.textMuted, marginTop: 8 },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
   cardContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   card: {
     position: 'absolute',
@@ -517,30 +575,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   placeholderText: { fontSize: 80, color: '#fff', fontWeight: '600' },
-  likeBadge: {
-    position: 'absolute',
-    top: 50,
-    left: 30,
-    zIndex: 10,
-    transform: [{ rotate: '-25deg' }],
-    borderWidth: 4,
-    borderColor: '#10b981',
-    padding: 8,
-    borderRadius: 8,
-  },
-  likeBadgeText: { color: '#10b981', fontSize: 28, fontWeight: '800' },
-  passBadge: {
-    position: 'absolute',
-    top: 50,
-    right: 30,
-    zIndex: 10,
-    transform: [{ rotate: '25deg' }],
-    borderWidth: 4,
-    borderColor: '#ef4444',
-    padding: 8,
-    borderRadius: 8,
-  },
-  passBadgeText: { color: '#ef4444', fontSize: 28, fontWeight: '800' },
   cardOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -549,10 +583,68 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
+  cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardName: { fontSize: 24, fontWeight: '700', color: '#fff' },
-  cardLocation: { fontSize: 16, color: '#fff', marginTop: 4, opacity: 0.9 },
-  interestsRow: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  interestItem: { fontSize: 13, color: '#fff', opacity: 0.9 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22c55e' },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  cardLocation: { fontSize: 15, color: '#fff', opacity: 0.95 },
+  interestsRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  interestPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  interestItem: { fontSize: 13, color: '#fff', fontWeight: '500' },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+    paddingVertical: 24,
+    paddingBottom: 32,
+  },
+  actionBtnPass: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionBtnSuperLike: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionBtnLike: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

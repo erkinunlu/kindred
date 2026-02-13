@@ -7,6 +7,9 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  Dimensions,
+  Share,
+  Alert,
 } from 'react-native';
 import { Text as AppText } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +17,9 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fonts } from '@/constants/theme';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoPlayer } from '@/components/VideoPlayer';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const REACTIONS = [
   { type: 'like', emoji: '❤️', label: 'Beğen' },
@@ -56,16 +61,29 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('tr-TR');
 }
 
+function renderContentWithHashtags(text: string) {
+  const parts = text.split(/(#\w+)/g).filter(Boolean);
+  return parts.map((part, i) =>
+    part.startsWith('#') ? (
+      <AppText key={i} style={styles.hashtag}>{part}</AppText>
+    ) : (
+      part
+    )
+  );
+}
+
 function PostCard({
   post,
   onReaction,
   onComment,
   onUserPress,
+  onShare,
 }: {
   post: Post;
   onReaction: (postId: string, reactionType: ReactionType) => void;
   onComment: (postId: string) => void;
   onUserPress: (userId: string) => void;
+  onShare: (postId: string) => void;
 }) {
   const [showReactions, setShowReactions] = useState(false);
 
@@ -75,33 +93,49 @@ function PostCard({
 
   return (
     <View style={styles.postCard}>
-      <TouchableOpacity style={styles.postHeader} onPress={() => onUserPress(post.user_id)} activeOpacity={0.7}>
-        {post.profiles?.avatar_url ? (
-          <Image source={{ uri: post.profiles.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <AppText style={styles.avatarText}>{post.profiles?.full_name?.charAt(0) || '?'}</AppText>
+      <View style={styles.postHeaderRow}>
+        <TouchableOpacity style={styles.postHeader} onPress={() => onUserPress(post.user_id)} activeOpacity={0.7}>
+          {post.profiles?.avatar_url ? (
+            <Image source={{ uri: post.profiles.avatar_url }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <AppText style={styles.avatarText}>{post.profiles?.full_name?.charAt(0) || '?'}</AppText>
+            </View>
+          )}
+          <View style={styles.postHeaderText}>
+            <AppText style={styles.postAuthor}>{post.profiles?.full_name || 'Anonim'}</AppText>
+            <AppText style={styles.postTime}>{formatDate(post.created_at)}</AppText>
           </View>
-        )}
-        <View style={styles.postHeaderText}>
-          <AppText style={styles.postAuthor}>{post.profiles?.full_name || 'Anonim'}</AppText>
-          <AppText style={styles.postTime}>{formatDate(post.created_at)}</AppText>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuBtn}
+          onPress={() =>
+            Alert.alert('Gönderi', undefined, [
+              { text: 'İptal', style: 'cancel' },
+              { text: 'Bildir', onPress: () => {} },
+              { text: 'Gizle', onPress: () => {} },
+            ])
+          }
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
       {post.media_url && (
-        post.post_type === 'video' ? (
-          <Video source={{ uri: post.media_url }} style={styles.postMedia} useNativeControls resizeMode={ResizeMode.COVER} />
-        ) : (
-          <TouchableOpacity onPress={() => onComment(post.id)} activeOpacity={1}>
-            <Image source={{ uri: post.media_url }} style={styles.postMedia} resizeMode="cover" />
-          </TouchableOpacity>
-        )
+        <View style={styles.mediaContainer}>
+          {post.post_type === 'video' ? (
+            <VideoPlayer uri={post.media_url} />
+          ) : (
+            <TouchableOpacity onPress={() => onComment(post.id)} activeOpacity={1}>
+              <Image source={{ uri: post.media_url }} style={styles.postMedia} resizeMode="cover" />
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
       {post.content ? (
-        <TouchableOpacity onPress={() => onComment(post.id)} activeOpacity={1}>
-          <AppText style={styles.postContent}>{post.content}</AppText>
+        <TouchableOpacity onPress={() => onComment(post.id)} activeOpacity={1} style={styles.contentWrapper}>
+          <AppText style={styles.postContent}>{renderContentWithHashtags(post.content)}</AppText>
         </TouchableOpacity>
       ) : null}
 
@@ -138,6 +172,10 @@ function PostCard({
         <TouchableOpacity style={styles.actionBtn} onPress={() => onComment(post.id)}>
           <Ionicons name="chatbubble-outline" size={22} color={colors.textMuted} />
           <AppText style={styles.actionCount}>{post.comment_count || 0}</AppText>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionBtn} onPress={() => onShare(post.id)}>
+          <Ionicons name="share-outline" size={22} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -273,6 +311,19 @@ export default function HomeScreen() {
     router.push(`/post/${postId}`);
   };
 
+  const handleShare = async (postId: string) => {
+    try {
+      await Share.share({
+        message: `KindRed gönderisi: ${postId}`,
+        url: `kindred://post/${postId}`,
+        title: 'KindRed',
+      });
+    } catch (e) {
+      if ((e as Error).message?.includes('cancel')) return;
+      console.warn('Share error:', e);
+    }
+  };
+
   if (loading && posts.length === 0) {
     return (
       <View style={styles.centered}>
@@ -293,6 +344,7 @@ export default function HomeScreen() {
             onReaction={handleReaction}
             onComment={handleComment}
             onUserPress={(userId) => router.push(`/user/${userId}`)}
+            onShare={handleShare}
           />
         )}
         contentContainerStyle={styles.list}
@@ -304,38 +356,48 @@ export default function HomeScreen() {
         }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPosts(); }} />}
       />
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/post/create')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="pencil" size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: 16, paddingBottom: 32 },
+  list: { paddingHorizontal: 0, paddingBottom: 100 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12, fontSize: 16, color: colors.textMuted },
-  empty: { padding: 48, alignItems: 'center' },
+  empty: { padding: 48, paddingHorizontal: 16, alignItems: 'center' },
   emptyText: { fontSize: 18, fontWeight: '600', color: colors.textMuted, marginBottom: 8 },
   emptySubtext: { fontSize: 14, color: colors.textMuted },
   postCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
-  postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  postHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
+  postHeader: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  menuBtn: { padding: 8 },
   avatar: { width: 44, height: 44, borderRadius: 22 },
   avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: 18, fontWeight: '600' },
   postHeaderText: { marginLeft: 12 },
   postAuthor: { fontSize: 16, fontWeight: '600', color: colors.text },
   postTime: { fontSize: 12, color: colors.textMuted },
-  postMedia: { width: '100%', height: 280, borderRadius: 8, marginBottom: 12, backgroundColor: colors.border },
-  postContent: { fontSize: 15, color: colors.text, lineHeight: 22, marginBottom: 12 },
-  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  mediaContainer: { width: SCREEN_WIDTH, marginBottom: 12, backgroundColor: colors.border },
+  postMedia: { width: SCREEN_WIDTH, aspectRatio: 1, backgroundColor: colors.border },
+  contentWrapper: { paddingHorizontal: 16, marginBottom: 12 },
+  postContent: { fontSize: 15, color: colors.text, lineHeight: 22 },
+  hashtag: { color: colors.primary, fontWeight: '600' },
+  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: 20, paddingHorizontal: 16, paddingBottom: 16 },
   reactionArea: { position: 'relative' },
   reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   reactionEmoji: { fontSize: 22 },
@@ -359,4 +421,20 @@ const styles = StyleSheet.create({
   reactionOptionEmoji: { fontSize: 28 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionCount: { fontSize: 14, color: colors.textMuted },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 90,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 8,
+  },
 });

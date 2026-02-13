@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -22,6 +22,15 @@ export default function ProfileSetupScreen() {
   const { session } = useAuth();
   const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
+
+  useEffect(() => {
+    if (session?.user) {
+      supabase.from('profiles').select('full_name').eq('user_id', session.user.id).single()
+        .then(({ data }) => {
+          if (data?.full_name) setFullName(data.full_name);
+        });
+    }
+  }, [session?.user?.id]);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

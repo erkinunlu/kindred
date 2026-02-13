@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import { Text } from '@/components/Text';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -179,9 +182,13 @@ export default function PostDetailScreen() {
           </TouchableOpacity>
           {post.media_url && (
             post.post_type === 'video' ? (
-              <Video source={{ uri: post.media_url }} style={styles.postMedia} useNativeControls resizeMode={ResizeMode.COVER} />
+              <View style={styles.mediaContainer}>
+                <VideoPlayer uri={post.media_url} />
+              </View>
             ) : (
-              <Image source={{ uri: post.media_url }} style={styles.postMedia} resizeMode="cover" />
+              <View style={styles.mediaContainer}>
+                <Image source={{ uri: post.media_url }} style={styles.postMedia} resizeMode="cover" />
+              </View>
             )
           )}
           {post.content ? <Text style={styles.postContent}>{post.content}</Text> : null}
@@ -239,7 +246,8 @@ const styles = StyleSheet.create({
   postHeaderText: { marginLeft: 12 },
   postAuthor: { fontSize: 16, fontWeight: '600', color: colors.text },
   postTime: { fontSize: 12, color: colors.textMuted },
-  postMedia: { width: '100%', height: 280, borderRadius: 8, marginBottom: 12, backgroundColor: colors.border },
+  mediaContainer: { width: SCREEN_WIDTH, marginLeft: -32, marginBottom: 12, backgroundColor: colors.border },
+  postMedia: { width: SCREEN_WIDTH, aspectRatio: 1, backgroundColor: colors.border },
   postContent: { fontSize: 15, color: colors.text, lineHeight: 22, marginBottom: 12 },
   actionsRow: { flexDirection: 'row', gap: 20 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
