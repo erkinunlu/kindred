@@ -7,7 +7,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "expo export -p web"
+    "build:web": "expo export -p web",
+    "build:ipa": "bash scripts/build-ipa.sh",
+    "build:ipa:setup": "bash scripts/build-ipa-setup.sh"
   },
   "dependencies": {
     "@expo-google-fonts/titillium-web": "^0.4.1",

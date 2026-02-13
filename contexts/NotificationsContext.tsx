@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { supabase } from '@/lib/supabase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,6 +16,13 @@ Notifications.setNotificationHandler({
 const NotificationsContext = createContext<{
   expoPushToken: string | null;
 }>({ expoPushToken: null });
+
+async function saveTokenToProfile(token: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from('profiles').update({ expo_push_token: token }).eq('user_id', user.id);
+  }
+}
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [expoPushToken, setExpoPushToken] = React.useState<string | null>(null);
@@ -34,9 +41,19 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
       const token = (await Notifications.getExpoPushTokenAsync()).data;
       setExpoPushToken(token);
+      saveTokenToProfile(token);
     };
     register();
   }, []);
+
+  useEffect(() => {
+    if (expoPushToken) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) saveTokenToProfile(expoPushToken);
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [expoPushToken]);
 
   return (
     <NotificationsContext.Provider value={{ expoPushToken }}>

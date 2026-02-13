@@ -14,6 +14,7 @@
       "backgroundColor": "#E74C3C"
     },
     "ios": {
+      "bundleIdentifier": "com.erkinunlu.kindred",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Yak\u0131ndaki kullan\u0131c\u0131lar\u0131 g\u00f6stermek i\u00e7in konumunuza ihtiyac\u0131m\u0131z var."

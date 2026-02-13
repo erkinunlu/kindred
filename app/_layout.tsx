@@ -55,6 +55,14 @@ export default function RootLayout() {
           <Stack.Screen name="chat/[id]" />
           <Stack.Screen name="post" />
           <Stack.Screen name="user/[id]" />
+          <Stack.Screen
+            name="notifications"
+            options={{
+              headerShown: true,
+              title: 'Bildirimler',
+              headerBackTitle: 'Geri',
+            }}
+          />
         </Stack>
           </NotificationsProvider>
           </FilterProvider>

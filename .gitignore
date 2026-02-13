@@ -41,6 +41,7 @@ yarn-error.*
 /ios
 /android
 
-# APK output
+# Build output
 *.apk
+*.ipa
 supabase/.temp/

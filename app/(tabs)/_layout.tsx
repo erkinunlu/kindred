@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { fonts, colors } from '@/constants/theme';
 
 export default function TabsLayout() {
+  const router = useRouter();
   return (
     <Tabs
       screenOptions={{
@@ -28,7 +30,7 @@ export default function TabsLayout() {
             <Ionicons name="home" size={size} color={color} />
           ),
           headerRight: () => (
-            <TouchableOpacity style={{ marginRight: 16 }} onPress={() => {}}>
+            <TouchableOpacity style={{ marginRight: 16 }} onPress={() => router.push('/notifications')}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons name="notifications-outline" size={20} color="#fff" />
               </View>
