@@ -23,7 +23,7 @@ export default function LoginScreen() {
       if (session) {
         supabase.from('profiles').select('status, full_name').eq('user_id', session.user.id).single()
           .then(({ data: profile }) => {
-            if (profile?.status === 'approved') router.replace('/(tabs)/feed');
+            if (profile?.status === 'approved') router.replace('/(tabs)/discover');
             else if (profile?.status === 'pending' && profile?.full_name?.trim()) router.replace('/pending-approval');
             else router.replace('/(onboarding)/profile');
           })

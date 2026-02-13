@@ -24,6 +24,11 @@ interface Profile {
   interests?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  birth_date?: string | null;
+  friendship_type?: string | null;
+  hangout_frequency?: string | null;
+  languages?: string | null;
+  profile_photos?: string[] | null;
 }
 
 interface AuthContextType {

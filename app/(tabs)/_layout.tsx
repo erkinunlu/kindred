@@ -18,24 +18,6 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="feed"
-        options={{
-          title: 'Akış',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="gundem"
-        options={{
-          title: 'Gündem',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pricetag" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="discover"
         options={{
           title: 'Ana Sayfa',

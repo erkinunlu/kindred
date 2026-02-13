@@ -65,7 +65,7 @@ function formatResetTime(date: Date): string {
 }
 
 /** Haversine formülü - km cinsinden mesafe */
-function distanceKm(
+function haversineKm(
   lat1: number,
   lon1: number,
   lat2: number,
@@ -156,7 +156,7 @@ export default function DiscoverScreen() {
         .filter((u) => {
           const lat = u.latitude ?? 41.0082;
           const lon = u.longitude ?? 28.9784;
-          return distanceKm(myLat, myLon, lat, lon) <= distanceKm;
+          return haversineKm(myLat, myLon, lat, lon) <= distanceKm;
         });
 
       setUsers(filtered);
